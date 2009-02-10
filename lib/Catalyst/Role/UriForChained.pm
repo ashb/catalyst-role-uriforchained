@@ -86,7 +86,42 @@ sub _uri_for_rel_chained {
     }
   }
 
-  1;
+  my @caps = $c->_captures_for_actions(\@shared);
+
+  # No public way yet. FAIL
+  my $actions = $c->dispatcher->_dispatch_types->[3]->_actions;
+
+  # This aint right. Sub packages will probably mess things up.
+  while (@segs) {
+    my $p = shift @segs;
+
+    # WRONG WRONG WRONG
+    my $act = $actions->{"/$p"};
+    croak "/$p is not a chained action"
+      unless $act;
+
+    croak "$act is not a child of $shared[-1]"
+      unless $act->attributes->{Chained}[0] eq "/$shared[-1]";
+
+    if (exists $act->attributes->{Args}) {
+      my $args = $act->attributes->{Args};
+      croak "premeture end of chain at $act for $uri"
+        if @segs;
+
+      croak "Wrong number of final Args to uri_for_chained"
+        if (defined $args->[0] && $args->[0] != @_);
+
+      return $c->uri_for($act, \@caps, @_);
+    }
+
+    my $cap_args = $act->attributes->{CaptureArgs}[0];
+    croak("Not enough captures passed to uri_for_chained")
+      unless $cap_args <= scalar @_;
+
+    push @caps, splice(@_, 0, $cap_args);
+
+  }
+  croak "$uri did not end up at an action chain!";
 }
 
 # TODO: Refactor this section into Cat::DispatchType::Chained or similar

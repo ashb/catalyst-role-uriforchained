@@ -13,8 +13,8 @@ can_ok("Catty", 'uri_for_chained');
 
 $m->get_ok('/');
 $m->content_is("http://localhost/product/123");
-$DB::single = 1;
 $m->get_ok("http://localhost/product/123");
+$m->content_is("http://localhost/product/123/rate/5");
 
 
 
